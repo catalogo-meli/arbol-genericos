@@ -1,0 +1,542 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checklist — Árbol de decisión de Genéricos</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f5;
+    color: #333;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 24px 16px 80px;
+  }
+  .wrap { max-width: 840px; margin: 0 auto; }
+
+  .top-header {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px 24px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    border: 1px solid #eee;
+    margin-bottom: 18px;
+  }
+  .top-header h1 { font-size: 18px; color: #111; margin-bottom: 4px; }
+  .top-header .sub { font-size: 13px; color: #777; }
+
+  .result-bar {
+    position: sticky;
+    top: 12px;
+    z-index: 50;
+    margin-bottom: 18px;
+  }
+  .result-box {
+    border-radius: 12px;
+    padding: 16px 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.12);
+  }
+  .result-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .result-top .left { display: flex; align-items: center; gap: 12px; }
+  .result-box .icon { font-size: 26px; }
+  .result-box .label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; opacity: 0.75; }
+  .result-box .verdict-text { font-size: 17px; font-weight: 800; }
+  .result-box .detail { font-size: 12.5px; margin-top: 2px; opacity: 0.9; }
+  .result-box .count-pill {
+    background: rgba(255,255,255,0.6);
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12.5px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .res-pending { background: #f3f4f6; border: 1.5px dashed #cbd5e1; color: #555; }
+  .res-pending .count-pill { background: #fff; }
+  .res-generico { background: #fee2e2; border: 1.5px solid #dc2626; color: #7f1d1d; }
+  .res-generico .count-pill { background: #fecaca; }
+  .res-real { background: #dcfce7; border: 1.5px solid #16a34a; color: #14532d; }
+  .res-real .count-pill { background: #bbf7d0; }
+  .res-dudoso { background: #dbeafe; border: 1.5px solid #3b82f6; color: #1e3a8a; }
+  .res-dudoso .count-pill { background: #bfdbfe; }
+
+  .signals-list {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+  }
+  .signals-list .sig-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; opacity: 0.75; margin-bottom: 6px; }
+  .signals-list ul { list-style: none; }
+  .signals-list li {
+    font-size: 12.5px;
+    padding: 5px 0;
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+  }
+  .signals-list li .bullet {
+    font-weight: 800;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+  }
+
+  .result-actions {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: flex-end;
+  }
+  .btn-copy {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+  }
+  .btn-copy.copied { background: #16a34a; }
+
+  .tree-container {
+    background: #fff;
+    border-radius: 12px;
+    padding: 8px 24px 20px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    border: 1px solid #eee;
+    margin-bottom: 18px;
+  }
+  .tree-title { font-size: 15px; font-weight: 700; margin: 16px 0 4px; color: #111; }
+  .tree-subtitle { font-size: 12.5px; color: #777; margin-bottom: 18px; }
+
+  .q-block {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    transition: opacity 0.2s;
+  }
+  .q-block.locked { opacity: 0.35; pointer-events: none; }
+  .q-block.step7 { border-color: #e0e7ff; background: #f5f3ff; }
+  .q-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: #f5a623;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: 8px;
+    flex-shrink: 0;
+  }
+  .q-block.step7 .q-num { background: #6366f1; }
+  .q-text { font-size: 13.5px; font-weight: 600; color: #111; margin-bottom: 12px; display: flex; align-items: flex-start; }
+  .q-answers { display: flex; flex-direction: column; gap: 7px; margin-left: 30px; }
+  .q-answer {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px; border-radius: 8px; font-size: 13px;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+  }
+  .q-answer input { accent-color: #333; width: 16px; height: 16px; flex-shrink: 0; cursor: pointer; }
+  .q-answer .cond {
+    font-weight: 700; font-size: 11px; padding: 2px 8px;
+    border-radius: 10px; white-space: nowrap; flex-shrink: 0;
+  }
+  .ans-si { background: #fef3c7; }
+  .ans-si .cond { background: #f59e0b; color: #fff; }
+  .ans-no { background: #f0fdf4; }
+  .ans-no .cond { background: #16a34a; color: #fff; }
+  .ans-maybe { background: #eff6ff; }
+  .ans-maybe .cond { background: #3b82f6; color: #fff; }
+  .q-answer.checked { border-color: rgba(0,0,0,0.25); }
+
+  .actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+  .btn {
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-reset { background: #fff; color: #555; border: 1px solid #ddd; }
+  .btn-print { background: #333; color: #fff; }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .btn-reset, .btn-copy { display: none; }
+    .result-bar { position: static; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top-header">
+    <h1>🌳 Checklist — Árbol de decisión de Genéricos</h1>
+    <div class="sub">Respondé cada pregunta en orden. El resultado se calcula automáticamente.</div>
+  </div>
+
+  <div class="result-bar">
+    <div class="result-box res-pending" id="result-box">
+      <div class="result-top">
+        <div class="left">
+          <div class="icon" id="result-icon">⏳</div>
+          <div>
+            <div class="label">Resultado</div>
+            <div class="verdict-text" id="result-text">Análisis en curso</div>
+            <div class="detail" id="result-detail">Respondé las preguntas para obtener el veredicto.</div>
+          </div>
+        </div>
+        <div class="count-pill" id="result-count">0 señales acumuladas</div>
+      </div>
+      <div class="signals-list" id="signals-list" style="display:none;">
+        <div class="sig-title">Preguntas que sumaron señal de genérico</div>
+        <ul id="signals-ul"></ul>
+      </div>
+      <div class="result-actions">
+        <button class="btn-copy" id="copy-btn" onclick="copyResult()">📋 Copiar resultado</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tree-container">
+    <div class="tree-title">Preguntas del árbol</div>
+    <div class="tree-subtitle">Seguí el orden. Si una pregunta cierra el análisis, las siguientes se bloquean automáticamente.</div>
+
+    <div id="questions"></div>
+
+    <div class="actions">
+      <button class="btn btn-reset" onclick="resetAll()">↺ Reiniciar</button>
+      <button class="btn btn-print" onclick="window.print()">🖨 Exportar / Imprimir</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const QUESTIONS = [
+  {
+    id: 'q1',
+    num: 1,
+    text: '¿La marca dice explícitamente "Genérico", usa el nombre del producto como marca ("AURICULARES", "CABLE HDMI"), o no es posible identificar ninguna marca en ninguna sección (ni en la ficha técnica ni en las imágenes)?',
+    options: [
+      { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Confirmado: cierra el análisis como GENÉRICO.' },
+      { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Continuar al paso 2.' }
+    ]
+  },
+  {
+    id: 'q2',
+    num: 2,
+    text: '¿La marca es una cadena de letras sin sentido (ej. YFSFQS, KXZWQ) o una palabra de "calidad" sin nombre real (ej. "PREMIUM", "IMPORTADO")?',
+    short: 'Marca sin sentido o palabra genérica de "calidad"',
+    options: [
+      { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Sospecha alta. Salta directo al paso 6 para confirmar.', signal: 1 },
+      { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Sin señal adicional por ahora. Continuar al paso 3.', signal: 0 }
+    ]
+  },
+  {
+    id: 'q3',
+    num: 3,
+    text: '¿El título describe el producto con lista de features en lugar de nombrarlo, y/o el modelo dice "Universal", "Genérico", "Nuevo Modelo" o es un descriptor?',
+    short: 'Título/modelo descriptivo en lugar de nombre de producto',
+    options: [
+      { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Sospecha alta.', signal: 1 },
+      { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Sin señal adicional por ahora.', signal: 0 }
+    ]
+  },
+  {
+    id: 'q4',
+    num: 4,
+    text: '¿Las fotos no muestran ningún logo o branding en el producto, la caja o el manual?',
+    short: 'Sin logo/branding visible en fotos',
+    options: [
+      { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Señal de sospecha.', signal: 1 },
+      { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Señal positiva (sí hay logo/branding visible).', signal: 0 }
+    ]
+  },
+  {
+    id: 'q5',
+    num: 5,
+    text: '¿Tiene GTIN declarado?',
+    short: 'Sin GTIN declarado',
+    options: [
+      { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Señal adicional de sospecha.', signal: 1 },
+      { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Suma contexto positivo (no confirma por sí solo).', signal: 0 }
+    ]
+  },
+  {
+    id: 'q6',
+    num: 6,
+    text: 'Buscá la marca en Google. ¿Tiene web oficial, reseñas en sitios especializados o menciones fuera de marketplaces (Amazon, Falabella, Frávega, etc.)?',
+    short: 'Sin presencia real fuera de marketplaces',
+    options: [
+      { value: 'si', cls: 'ans-no', cond: 'SÍ, presencia fuera de marketplaces', label: 'Marca probablemente legítima: cierra el análisis como NO GENÉRICO.' },
+      { value: 'solo_marketplaces', cls: 'ans-si', cond: 'Solo marketplaces', label: 'No confirma marca real.', signal: 1 },
+      { value: 'sin_info', cls: 'ans-maybe', cond: 'Sin info', label: 'Sin presencia = señal fuerte de genérico.', signal: 1 }
+    ]
+  }
+];
+
+const state = {};
+const SIGNAL_IDS = ['q2', 'q3', 'q4', 'q5', 'q6'];
+
+function buildQuestions() {
+  const container = document.getElementById('questions');
+  container.innerHTML = '';
+  QUESTIONS.forEach(q => {
+    const block = document.createElement('div');
+    block.className = 'q-block';
+    block.id = 'block-' + q.id;
+
+    let answersHtml = '';
+    q.options.forEach(opt => {
+      const checked = state[q.id] === opt.value ? 'checked' : '';
+      answersHtml += `
+        <label class="q-answer ${opt.cls} ${checked ? 'checked' : ''}" id="label-${q.id}-${opt.value}">
+          <input type="radio" name="${q.id}" value="${opt.value}" ${checked} onchange="onAnswer('${q.id}','${opt.value}')">
+          <span class="cond">${opt.cond}</span>
+          <span>${opt.label}</span>
+        </label>`;
+    });
+
+    block.innerHTML = `
+      <div class="q-text"><span class="q-num">${q.num}</span>${q.text}</div>
+      <div class="q-answers">${answersHtml}</div>
+    `;
+    container.appendChild(block);
+  });
+
+  const step7 = document.createElement('div');
+  step7.className = 'q-block step7';
+  step7.id = 'block-q7';
+  step7.innerHTML = `
+    <div class="q-text"><span class="q-num">7</span>¿Cuántas señales de alerta se acumularon en los pasos 2 al 6? (calculado automáticamente)</div>
+    <div class="q-answers" id="q7-summary" style="margin-left:30px; font-size:13px; color:#4338ca;"></div>
+  `;
+  container.appendChild(step7);
+
+  refreshAll();
+}
+
+function onAnswer(qid, value) {
+  state[qid] = value;
+  refreshAll();
+}
+
+function computeSignal(qid) {
+  if (!(qid in state)) return null;
+  const q = QUESTIONS.find(x => x.id === qid);
+  const opt = q.options.find(o => o.value === state[qid]);
+  return opt && typeof opt.signal === 'number' ? opt.signal : null;
+}
+
+function refreshAll() {
+  QUESTIONS.forEach(q => {
+    q.options.forEach(opt => {
+      const el = document.getElementById(`label-${q.id}-${opt.value}`);
+      if (!el) return;
+      el.classList.toggle('checked', state[q.id] === opt.value);
+    });
+  });
+
+  const q1No = state.q1 === 'no';
+  const q6Real = state.q6 === 'si';
+
+  let earlyVerdict = null;
+  if (state.q1 === 'si') {
+    earlyVerdict = { type: 'generico', text: '🔴 GENÉRICO', detail: 'Cerrado en el paso 1: marca ausente, "Genérico" o nombre del producto como marca.' };
+  } else if (q1No && q6Real) {
+    earlyVerdict = { type: 'real', text: '🟢 NO ES GENÉRICO', detail: 'Cerrado en el paso 6: la marca tiene presencia real fuera de marketplaces.' };
+  }
+
+  const q2Skip = state.q2 === 'si'; // "SÍ" en el paso 2 salta directo al paso 6
+
+  toggleLock('q2', !q1No);
+  toggleLock('q3', !(q1No && state.q2) || q2Skip);
+  toggleLock('q4', !(q1No && state.q2 && state.q3) || q2Skip);
+  toggleLock('q5', !(q1No && state.q2 && state.q3 && state.q4) || q2Skip);
+  toggleLock('q6', q2Skip ? !(q1No && state.q2) : !(q1No && state.q2 && state.q3 && state.q4 && state.q5));
+
+  let totalSignals = 0;
+  let answeredCount = 0;
+  let allAnswered = true;
+  const signalHits = [];
+
+  const activeSignalIds = q2Skip ? ['q2', 'q6'] : SIGNAL_IDS;
+
+  if (q1No && !earlyVerdict) {
+    activeSignalIds.forEach(id => {
+      const s = computeSignal(id);
+      if (s !== null) {
+        totalSignals += s;
+        answeredCount++;
+        if (s > 0) {
+          const q = QUESTIONS.find(x => x.id === id);
+          signalHits.push(`${q.num}. ${q.short}`);
+        }
+      } else {
+        allAnswered = false;
+      }
+    });
+  }
+
+  const step7box = document.getElementById('q7-summary');
+  const step7block = document.getElementById('block-q7');
+  if (earlyVerdict) {
+    step7block.classList.add('locked');
+    step7box.innerHTML = 'No aplica — el análisis ya se cerró en un paso anterior.';
+  } else if (!q1No) {
+    step7block.classList.add('locked');
+    step7box.innerHTML = 'Respondé el paso 1 primero.';
+  } else {
+    step7block.classList.remove('locked');
+    const totalQuestions = activeSignalIds.length;
+    step7box.innerHTML = `Señales acumuladas hasta ahora: <strong>${totalSignals}</strong> de ${totalQuestions} pregunta(s) (${answeredCount}/${totalQuestions} respondidas)${q2Skip ? ' — pasos 3, 4 y 5 saltados por el atajo del paso 2' : ''}.`;
+  }
+
+  let finalVerdict;
+  if (earlyVerdict) {
+    finalVerdict = earlyVerdict;
+  } else if (q1No && allAnswered && q2Skip) {
+    // Camino corto: paso 2 (SÍ) + paso 6. Máximo 2 señales posibles.
+    if (totalSignals >= 2) {
+      finalVerdict = { type: 'generico', text: '🔴 GENÉRICO', detail: 'Paso 7: marca sin sentido (paso 2) + sin presencia real de marca (paso 6) → tratar como genérico.' };
+    } else if (totalSignals >= 1) {
+      finalVerdict = { type: 'dudoso', text: '🔵 DUDOSO', detail: 'Paso 7: solo 1 señal entre el paso 2 y el paso 6 → zona gris. Ante la duda, tratar como NO genérico para evitar fricción al seller.' };
+    } else {
+      finalVerdict = { type: 'real', text: '🟢 NO ES GENÉRICO', detail: 'Paso 7: ninguna señal acumulada entre el paso 2 y el paso 6.' };
+    }
+  } else if (q1No && allAnswered) {
+    if (totalSignals >= 3) {
+      finalVerdict = { type: 'generico', text: '🔴 GENÉRICO', detail: `Paso 7: ${totalSignals} señales acumuladas (3 o más) → tratar como genérico.` };
+    } else if (totalSignals >= 1) {
+      finalVerdict = { type: 'dudoso', text: '🔵 DUDOSO', detail: `Paso 7: ${totalSignals} señal(es) acumulada(s) (1 o 2) → zona gris. Ante la duda, tratar como NO genérico para evitar fricción al seller.` };
+    } else {
+      finalVerdict = { type: 'real', text: '🟢 NO ES GENÉRICO', detail: 'Paso 7: ninguna señal acumulada en los pasos 2 al 6.' };
+    }
+  } else {
+    finalVerdict = { type: 'pending', text: 'Análisis en curso', detail: 'Respondé las preguntas para obtener el veredicto.' };
+  }
+
+  const showCount = q1No && !earlyVerdict;
+  renderResult(finalVerdict, totalSignals, showCount, signalHits);
+}
+
+function toggleLock(qid, locked) {
+  const block = document.getElementById('block-' + qid);
+  if (!block) return;
+  block.classList.toggle('locked', locked);
+}
+
+let lastResultData = null;
+
+function renderResult(v, signals, showCount, signalHits) {
+  const box = document.getElementById('result-box');
+  const icon = document.getElementById('result-icon');
+  const text = document.getElementById('result-text');
+  const detail = document.getElementById('result-detail');
+  const countPill = document.getElementById('result-count');
+  const sigListWrap = document.getElementById('signals-list');
+  const sigUl = document.getElementById('signals-ul');
+
+  box.className = 'result-box res-' + v.type;
+  text.textContent = v.text;
+  detail.textContent = v.detail;
+
+  const icons = { generico: '🔴', real: '🟢', dudoso: '🔵', pending: '⏳' };
+  icon.textContent = icons[v.type] || '⏳';
+
+  if (v.type === 'pending') {
+    countPill.style.display = 'inline-block';
+    countPill.textContent = '0 señales acumuladas';
+  } else if (showCount) {
+    countPill.style.display = 'inline-block';
+    countPill.textContent = signals + ' señal(es) acumulada(s)';
+  } else {
+    countPill.style.display = 'none';
+  }
+
+  if (showCount && signalHits.length > 0) {
+    sigListWrap.style.display = 'block';
+    sigUl.innerHTML = signalHits.map(h => `<li><span class="bullet">•</span>${h}</li>`).join('');
+  } else {
+    sigListWrap.style.display = 'none';
+    sigUl.innerHTML = '';
+  }
+
+  lastResultData = { verdict: v, signals, showCount, signalHits };
+}
+
+function copyResult() {
+  if (!lastResultData) return;
+  const { verdict, signals, showCount, signalHits } = lastResultData;
+  let lines = [];
+  lines.push('Resultado del análisis — Árbol de decisión de Genéricos');
+  lines.push('Veredicto: ' + verdict.text);
+  lines.push('Detalle: ' + verdict.detail);
+  if (showCount) {
+    lines.push('Señales acumuladas: ' + signals);
+  }
+  if (signalHits && signalHits.length > 0) {
+    lines.push('');
+    lines.push('Preguntas que sumaron señal de genérico:');
+    signalHits.forEach(h => lines.push('- ' + h));
+  }
+  const textOut = lines.join('\n');
+
+  const btn = document.getElementById('copy-btn');
+  const done = () => {
+    btn.textContent = '✓ Copiado';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copiar resultado';
+      btn.classList.remove('copied');
+    }, 1800);
+  };
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(textOut).then(done).catch(() => fallbackCopy(textOut, done));
+  } else {
+    fallbackCopy(textOut, done);
+  }
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed';
+  ta.style.left = '-9999px';
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); done(); } catch (e) {}
+  document.body.removeChild(ta);
+}
+
+function resetAll() {
+  if (!confirm('¿Reiniciar el checklist? Se perderán todas las respuestas marcadas.')) return;
+  Object.keys(state).forEach(k => delete state[k]);
+  buildQuestions();
+}
+
+buildQuestions();
+</script>
+</body>
+</html>

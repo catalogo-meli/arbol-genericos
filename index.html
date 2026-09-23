@@ -265,18 +265,18 @@ const QUESTIONS = [
   {
     id: 'q4',
     num: 4,
-    text: '¿Las fotos no muestran ningún logo o branding en el producto, la caja o el manual?',
+    text: '¿Las fotos muestran logo o branding en el producto, la caja o el manual?',
     short: 'Sin logo/branding visible en fotos',
     options: [
-      { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Señal de sospecha.', signal: 1 },
-      { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Señal positiva (sí hay logo/branding visible).', signal: 0 }
+      { value: 'si', cls: 'ans-no', cond: 'SÍ', label: 'Señal positiva (sí hay logo/branding visible).', signal: 0 },
+      { value: 'no', cls: 'ans-si', cond: 'NO', label: 'Señal de sospecha.', signal: 1 }
     ]
   },
   {
     id: 'q5',
     num: 5,
-    text: '¿Tiene GTIN declarado?',
-    short: 'Sin GTIN declarado',
+    text: '¿Tiene GTIN que valide el producto?',
+    short: 'Sin GTIN que valide el producto',
     options: [
       { value: 'no', cls: 'ans-no', cond: 'NO', label: 'Señal adicional de sospecha.', signal: 1 },
       { value: 'si', cls: 'ans-si', cond: 'SÍ', label: 'Suma contexto positivo (no confirma por sí solo).', signal: 0 }
